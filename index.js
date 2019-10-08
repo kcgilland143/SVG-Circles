@@ -42,9 +42,9 @@ function stepInnerCircles (
 }
 
 function rotate2 (arcCircle, element, angle, speed, reverse) {
-	var angle, speed, pointOnCircle, element
+  var pointOnCircle
 
-	var func = function () {
+  var func = function () {
     pointOnCircle = arcCircle.pointOnRadius(angle)
 
     element.setAttributeNS(null, "cx", pointOnCircle.x)
@@ -202,4 +202,4 @@ setInterval(() => {
   hourPipe.setAngles(-halfPi + (hourDelta * (d.getHours() % 12)), hourDelta)
 
   clockPipes.forEach((pipe, i) => clockElements[i].setAttributeNS(null, 'd', pipe.createPath()))
-}, 6)
+}, 0)
