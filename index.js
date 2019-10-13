@@ -52,10 +52,10 @@ function rotate2 (arcCircle, element, angle, speed, reverse) {
 
     angle = reverse
       ? angle <= 0
-        ? twoPi - angle
+        ? twoPi - angle - speed
         : angle - speed
       : angle >= twoPi
-        ? angle - twoPi
+        ? angle - twoPi + speed
         : angle + speed
     window.requestAnimationFrame(func)
   }
@@ -65,35 +65,65 @@ function rotate2 (arcCircle, element, angle, speed, reverse) {
 
 var colors = ["#2CA02C", "#37ABC8", "#FF7F2A", "#C83737", "#FFCC00"]
 
-var iCTest = new stepInnerCircles(10, 1, 14, 102, 6, 4)
+var iCTest = new stepInnerCircles(10, 1, 14, 102, 10, 4)
 
-for (var c = 0; c < 4; c++) {
-  iCTest.circles.forEach((circle, i) => {
+iCTest.circles.forEach((circle, i) => {
+  circle.angle = 0
+  circle.speed = 0.002 - 0.0002 * i
+  circle.rotateRadius = circle.cy
+  circle.getElement = function () {
     var cur
     cur = document.createElementNS("http://www.w3.org/2000/svg", "circle")
 
     cur.setAttributeNS(null, "id", "i-circle-" + i)
-    cur.setAttributeNS(null, "cx", circle.cx + circleTest.cx)
-    cur.setAttributeNS(null, "cy", circle.cy + circleTest.cy)
-    cur.setAttributeNS(null, "r", circle.radius)
+    cur.setAttributeNS(null, "cx", this.cx + circleTest.cx)
+    cur.setAttributeNS(null, "cy", this.cy + circleTest.cy)
+    cur.setAttributeNS(null, "r", this.radius)
     cur.setAttributeNS(
       null,
       "fill",
       colors[Math.floor(Math.random() * colors.length)]
     )
-    cur.setAttributeNS(null, "fill-opacity", 1)
+    cur.setAttributeNS(null, "fill-opacity", 0.5)
 
-    svg.appendChild(cur)
-    // rand angle Math.random() * (2 * Math.PI)
-    rotate2(
-      new Circle(circleTest.cx, circleTest.cy, circle.cy),
-      cur,
-      0 + (c * halfPi),
-      0.05 - 0.005 * (i)
-      // c % 2
-    )
+    return cur
+  }
+  circle.update = function (el, timestamp) {
+    // console.log(timestamp)
+    var timeDelta = timestamp - (this.lastUpdate || timestamp)
+    var angle = this.angle + (this.speed * timeDelta)
+    angle = angle >= twoPi ? angle - twoPi : angle
+    this.angle = angle
+    this.lastUpdate = timestamp
+    return this.render.bind(this, el)
+  }
+  circle.render = function (el) {
+    var p = pointOnRadius(circleTest.cx, circleTest.cy, this.rotateRadius, this.angle)
+
+    el.setAttributeNS(null, "cx", p.x)
+    el.setAttributeNS(null, "cy", p.y)
+  }
+})
+
+var multiCircles = []
+for (var c = 0; c < 4; c++) {
+  iCTest.circles.forEach((circle) => {
+    var nC = Object.assign({}, circle, {angle: c * halfPi})
+    multiCircles.push(nC)
   })
 }
+
+var spinningCircles = new Animation(svg, multiCircles)
+spinningCircles.paused = false
+spinningCircles.enter()
+spinningCircles.tick = function (t) {
+  spinningCircles.update(t)
+  spinningCircles.render()
+  window.requestAnimationFrame(spinningCircles.tick)
+}
+window.requestAnimationFrame(spinningCircles.tick)
+
+// Tech Circles
 
 var circles = Array.from({ length: 20 },
   (n, i) => new Circle(circleTest.cx, circleTest.cy, circleTest.radius - (5 * i)))
@@ -111,61 +141,47 @@ for (var i = 1; i < 10; i++) {
   ))
 }
 
-var svg2 = document.getElementById('second-svg')
-
-var pipeElements = pipes.map((pipe) => {
-  pipe.speed = pipe.speed ? pipe.speed : (Math.random() * 0.005) + 0.002
-  return pipe.toSvg()
-})
-pipeElements.forEach((pipe) => svg2.appendChild(pipe))
-pipeElements.forEach((pipeElement) => pipeElement.setAttributeNS(null, 'fill', colors[Math.floor(Math.random() * colors.length)]))
-
-setInterval(() => {
-  pipes.forEach((pipe, i) => {
+pipes.forEach((pipe, i) => {
+  pipe.speed = pipe.speed ? pipe.speed : (Math.random() * 0.01) + 0.001
+  pipe.getElement = function () {
+    var el = pipe.toSvg({'fill-opacity': 0.5})
+    el.setAttributeNS(null, 'fill', colors[Math.floor(Math.random() * colors.length)])
+    return el
+  }
+  pipe.update = function (el, timestamp) {
     var sA = pipe.startAngle + pipe.speed
+    var eA = pipe.endAngle + pipe.speed
     pipe.setStartAngle(sA > twoPi ? sA - twoPi : sA)
-    pipe.setEndAngle(sA > twoPi ? pipe.endAngle + pipe.speed - twoPi : pipe.endAngle + pipe.speed)
-    //pipe.getLong()
-    //pipeElements[i].setAttributeNS(null, 'd', pipe.createPath())
-  })
-}, 0)
-
-// pipes.forEach((p, i) => {
-//   TweenLite.to(p, i % 2 == 0 ? 1 : 3, {startAngle: p.startAngle + Math.PI, endAngle: p.endAngle + Math.PI})
-// })
-
-//Third circles
-
-var svg3 = document.getElementById('third-svg')
-
-var pipeElements3 = pipes.map((pipe) => pipe.toSvg())
-pipeElements3.forEach((pipe) => svg3.appendChild(pipe))
-pipeElements3.forEach((pipeElement) => {
-  pipeElement.setAttributeNS(null, 'fill', colors[Math.floor(Math.random() * colors.length)])
-  pipeElement.setAttributeNS(null, 'fill-opacity', 0.9)
-  // pipeElement.setAttributeNS(null, 'stroke', colors[Math.floor(Math.random() * colors.length)])
-  // pipeElement.setAttributeNS(null, 'stroke-opacity', 0.2)
+    pipe.setEndAngle(sA > twoPi ? eA - twoPi : eA)
+    return function () {
+      el.setAttributeNS(null, 'd', pipe.createPath())
+    }
+  }
 })
 
-function rAFCircle() {
-  pipeElements3.forEach((el, i) => {
-    el.setAttributeNS(null, 'd', pipes[i].createPath())
-  })
-  window.requestAnimationFrame(rAFCircle)
-}
+var svg2 = document.getElementById('second-svg')
+var spinningPipes = new Animation(svg2, pipes)
 
-rAFCircle()
+spinningPipes.enter()
+spinningPipes.paused = false
+spinningPipes.tick = function () {
+  spinningPipes.update()
+  spinningPipes.render()
+  window.requestAnimationFrame(spinningPipes.tick)
+}
+window.requestAnimationFrame(spinningPipes.tick)
 
 //Clock
 
-var svg4 = document.getElementById('fourth-svg')
+var svg3 = document.getElementById('third-svg')
 
 var clockTicks = Array.from({length: 12}, (n, i) => {
   var p = new Pipe.fromAngleLength(circles[1], circles[3], 0 + (twoPi / 12 * i), twoPi / 360)
   var el = p.toSvg()
   el.setAttributeNS(null, 'fill-opacity', 1)
   el.setAttributeNS(null, 'fill', '#999')
-  svg4.appendChild(el)
+  svg3.appendChild(el)
+  return el
 })
 
 var hourPipe = Pipe.fromAngleLength(circles[6], circles[14], -halfPi, (Math.PI / 6))
@@ -175,31 +191,52 @@ var milliPipe = Pipe.fromAngleLength(circles[0], circles[1], Math.PI, Math.PI)
 
 var clockPipes = [hourPipe, minutePipe, secondPipe, milliPipe]
 
-var clockElements = clockPipes.map((pipe) => pipe.toSvg())
-clockElements.forEach((pipe, i) => {
-  pipe.setAttributeNS(null, 'fill', colors[i])
-  pipe.setAttributeNS(null, 'fill-opacity', 1)
-  pipe.setAttributeNS(null, 'stroke', 'none')
-  svg4.appendChild(pipe)
-})
-
 var milliDelta = twoPi / 1000
 var secondDelta = twoPi / 60
 var minuteDelta = twoPi / 60
 var hourDelta = twoPi / 12
 
-setInterval(() => {
-  var d = new Date()
+var timeObject = new Date()
+var lastTick
 
-  // milliPipe.endAngle = milliPipe.startAngle + milliDelta * d.getMilliseconds()
-  // milliPipe.getLong()
-  milliPipe.setAngles(-halfPi, (milliDelta * d.getMilliseconds()))
+clockPipes.forEach((pipe, i) => {
+  pipe.getElement = () => pipe.toSvg({
+    'fill': colors[i],
+    'fill-opacity': 1
+  })
+})
 
-  secondPipe.setAngles(-halfPi + (secondDelta * d.getSeconds()), secondDelta / 2)
+hourPipe.update = function (el, timestamp) {
+  hourPipe.setAngles(-halfPi + (hourDelta * (timestamp.getHours() % 12)), hourDelta)
+  return updatePath.bind(null, el, hourPipe.createPath())
+}
+minutePipe.update = function (el, timestamp) {
+  minutePipe.setAngles(-halfPi + (minuteDelta * timestamp.getMinutes()), minuteDelta * 2)
+  return updatePath.bind(null, el, minutePipe.createPath())
+}
+secondPipe.update = function (el, timestamp) {
+  secondPipe.setAngles(-halfPi + (secondDelta * timestamp.getSeconds()), secondDelta / 2)
+  return updatePath.bind(null, el, secondPipe.createPath())
+}
+milliPipe.update = function (el, timestamp) {
+  var t = arguments[2] % 1000
+  if (lastTick <= t) { timeObject = new Date() }
+  lastTick = t
+  milliPipe.setAngles(-halfPi, (milliDelta * (arguments[2] % 1000)))
+  return updatePath.bind(null, el, milliPipe.createPath())
+}
 
-  minutePipe.setAngles(-halfPi + (minuteDelta * d.getMinutes()), minuteDelta * 2)
+function updatePath (el, path) {
+  el.setAttributeNS(null, 'd', path)
+}
 
-  hourPipe.setAngles(-halfPi + (hourDelta * (d.getHours() % 12)), hourDelta)
+var Clock = new Animation(svg3, clockPipes)
+Clock.enter()
+Clock.paused = false
 
-  clockPipes.forEach((pipe, i) => clockElements[i].setAttributeNS(null, 'd', pipe.createPath()))
-}, 0)
+function clockTick () {
+  Clock.update(timeObject, ...arguments)
+  Clock.render()
+  window.requestAnimationFrame(clockTick)
+}
+window.requestAnimationFrame(clockTick)

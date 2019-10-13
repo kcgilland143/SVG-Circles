@@ -35,15 +35,23 @@ Pipe.prototype.createPath = function () {
   return createPath(this.circle1, this.circle2, this.startAngle, this.endAngle, this.long)
 }
 
-Pipe.prototype.toSvg = function () {
+Pipe.prototype.toSvg = function (attributes) {
   var c
   c = document.createElementNS("http://www.w3.org/2000/svg", "path")
 
   // c.setAttributeNS(null, "cx", pointOnCircle.x);
   // c.setAttributeNS(null, "cy", pointOnCircle.y);
   c.setAttributeNS(null, "d", this.createPath())
-  c.setAttributeNS(null, "fill", "#d0a7dd")
-  c.setAttributeNS(null, "fill-opacity", 0.2)
+
+  if (attributes) {
+    Object.keys(attributes)
+      .forEach(key => {
+        c.setAttributeNS(null, key, attributes[key])
+      })
+  } else {
+    c.setAttributeNS(null, "fill-opacity", 0.2)
+    c.setAttributeNS(null, "fill", "#555")
+  }
 
   // c.setAttributeNS(null, "stroke", "#d0a7dd")
   // c.setAttributeNS(null, "stroke-width", 2)
