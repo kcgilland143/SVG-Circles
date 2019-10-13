@@ -41,28 +41,6 @@ function stepInnerCircles (
   }
 }
 
-function rotate2 (arcCircle, element, angle, speed, reverse) {
-  var pointOnCircle
-
-  var func = function () {
-    pointOnCircle = arcCircle.pointOnRadius(angle)
-
-    element.setAttributeNS(null, "cx", pointOnCircle.x)
-    element.setAttributeNS(null, "cy", pointOnCircle.y)
-
-    angle = reverse
-      ? angle <= 0
-        ? twoPi - angle - speed
-        : angle - speed
-      : angle >= twoPi
-        ? angle - twoPi + speed
-        : angle + speed
-    window.requestAnimationFrame(func)
-  }
-
-  window.requestAnimationFrame(func)
-}
-
 var colors = ["#2CA02C", "#37ABC8", "#FF7F2A", "#C83737", "#FFCC00"]
 
 var iCTest = new stepInnerCircles(10, 1, 14, 102, 10, 4)
