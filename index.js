@@ -1,3 +1,5 @@
+'use strict'
+
 var svg = document.getElementById("main-svg")
 const INNER_CIRCLE_RADIUS = 5
 const INNER_CIRCLE_OFFSET = 45
@@ -26,24 +28,38 @@ function stepInnerCircles (
   this.minMargin = minMargin
 
   var sDelta = (startSize - endSize) / steps
-  var oDelta = (startOffset - endOffset) / steps
+  var cSize = startSize
+  var totalSize = 0
+  var offsetRange = (endOffset - startOffset)
+  if (minMargin) {
+    for (var s = 0; s < this.steps; s++) {
+      totalSize += s > 0 ? cSize * 2 : cSize
+      cSize -= sDelta
+    }
+    if (totalSize > offsetRange) {
+      console.log('total size of circles is greater than offset range')
+      minMargin = 0
+      totalSize = 0
+    }
+  }
+  var oDelta = (offsetRange - totalSize) / steps
 
   var cur
-  var cSize = startSize
   var cOffset = startOffset
+  cSize = startSize
 
   for (var i = 0; i < this.steps; i++) {
     cur = new Circle(0, cOffset, cSize)
     this.circles.push(cur)
 
-    cOffset = cOffset - oDelta
     cSize = cSize - sDelta
+    cOffset = minMargin ? cOffset + (2 * cSize) + oDelta : cOffset + oDelta
   }
 }
 
 var colors = ["#2CA02C", "#37ABC8", "#FF7F2A", "#C83737", "#FFCC00"]
 
-var iCTest = new stepInnerCircles(10, 1, 14, 102, 10, 4)
+var iCTest = new stepInnerCircles(10, 1, 14, 108, 8, 1)
 
 iCTest.circles.forEach((circle, i) => {
   circle.angle = 0
@@ -64,22 +80,35 @@ iCTest.circles.forEach((circle, i) => {
     )
     cur.setAttributeNS(null, "fill-opacity", 0.5)
 
-    return cur
-  }
-  circle.update = function (el, timestamp) {
-    // console.log(timestamp)
-    var timeDelta = timestamp - (this.lastUpdate || timestamp)
-    var angle = this.angle + (this.speed * timeDelta)
-    angle = angle >= twoPi ? angle - twoPi : angle
-    this.angle = angle
-    this.lastUpdate = timestamp
-    return this.render.bind(this, el)
-  }
-  circle.render = function (el) {
-    var p = pointOnRadius(circleTest.cx, circleTest.cy, this.rotateRadius, this.angle)
+    this.render = this.render.bind(this, cur)
 
-    el.setAttributeNS(null, "cx", p.x)
-    el.setAttributeNS(null, "cy", p.y)
+    return this.render(cur)
+  }
+
+  circle.update = (function () {
+    var timeDelta, angle
+    return function circleUpdate (el, timestamp) {
+      // console.log(timestamp)
+      timeDelta = timestamp - (this.lastUpdate || timestamp)
+      angle = this.angle + (this.speed * timeDelta)
+      if (angle >= twoPi) angle = angle - twoPi
+      this.angle = angle
+      this.lastUpdate = timestamp
+      return this.render
+    }
+  })()
+
+  circle.render = function circleRender (el) {
+    this.p = pointOnRadius(circleTest.cx, circleTest.cy, this.rotateRadius, this.angle)
+
+    el.setAttributeNS(null, "cx", this.p.x)
+    el.setAttributeNS(null, "cy", this.p.y)
+
+    return el
+  }
+
+  circle.onPause = function (pausedBool) {
+    if (pausedBool) { this.lastUpdate = 0 }
   }
 })
 
@@ -92,9 +121,9 @@ for (var c = 0; c < 4; c++) {
 }
 
 var spinningCircles = new Animation(svg, multiCircles)
-spinningCircles.paused = false
+spinningCircles.paused = true
 spinningCircles.enter()
-spinningCircles.tick = function (t) {
+spinningCircles.tick = function tickCircles (t) {
   spinningCircles.update(t)
   spinningCircles.render()
   window.requestAnimationFrame(spinningCircles.tick)
@@ -120,20 +149,22 @@ for (var i = 1; i < 10; i++) {
 }
 
 pipes.forEach((pipe, i) => {
-  pipe.speed = pipe.speed ? pipe.speed : (Math.random() * 0.01) + 0.001
+  pipe.speed = pipe.speed ? pipe.speed : (Math.random() * 0.01) + 0.005
   pipe.getElement = function () {
-    var el = pipe.toSvg({'fill-opacity': 0.5})
+    var el = this.toSvg({'fill-opacity': 0.5})
     el.setAttributeNS(null, 'fill', colors[Math.floor(Math.random() * colors.length)])
     return el
   }
+  var sA, eA
   pipe.update = function (el, timestamp) {
-    var sA = pipe.startAngle + pipe.speed
-    var eA = pipe.endAngle + pipe.speed
-    pipe.setStartAngle(sA > twoPi ? sA - twoPi : sA)
-    pipe.setEndAngle(sA > twoPi ? eA - twoPi : eA)
-    return function () {
-      el.setAttributeNS(null, 'd', pipe.createPath())
-    }
+    sA = this.startAngle + this.speed
+    eA = this.endAngle + this.speed
+    this.setStartAngle(sA > twoPi ? sA - twoPi : sA)
+    this.setEndAngle(sA > twoPi ? eA - twoPi : eA)
+    return this.render.bind(this, el)
+  }
+  pipe.render = function (el) {
+    el.setAttributeNS(null, 'transform', `rotate(${Math.round(radToDegree(this.getCenterAngle()) + 'e+2') + 'e-2'} 0 0)`)
   }
 })
 
@@ -141,7 +172,7 @@ var svg2 = document.getElementById('second-svg')
 var spinningPipes = new Animation(svg2, pipes)
 
 spinningPipes.enter()
-spinningPipes.paused = false
+spinningPipes.paused = true
 spinningPipes.tick = function () {
   spinningPipes.update()
   spinningPipes.render()
@@ -162,20 +193,19 @@ var clockTicks = Array.from({length: 12}, (n, i) => {
   return el
 })
 
-var hourPipe = Pipe.fromAngleLength(circles[6], circles[14], -halfPi, (Math.PI / 6))
-var minutePipe = Pipe.fromAngleLength(circles[4], circles[16], -halfPi, (Math.PI / 30))
-var secondPipe = Pipe.fromAngleLength(circles[2], circles[18], -halfPi, (Math.PI / (30 * 60)))
-var milliPipe = Pipe.fromAngleLength(circles[0], circles[1], Math.PI, Math.PI)
-
-var clockPipes = [hourPipe, minutePipe, secondPipe, milliPipe]
-
 var milliDelta = twoPi / 1000
 var secondDelta = twoPi / 60
 var minuteDelta = twoPi / 60
 var hourDelta = twoPi / 12
 
+var hourPipe = Pipe.fromAngleLength(circles[6], circles[14], -halfPi, (Math.PI / 6))
+var minutePipe = Pipe.fromAngleLength(circles[4], circles[16], -halfPi, secondDelta * 2)
+var secondPipe = Pipe.fromAngleLength(circles[2], circles[18], -halfPi, secondDelta / 2)
+var milliPipe = Pipe.fromAngleLength(circles[0], circles[1], -halfPi, Math.PI)
+
+var clockPipes = [hourPipe, minutePipe, secondPipe, milliPipe]
+
 var timeObject = new Date()
-var lastTick
 
 clockPipes.forEach((pipe, i) => {
   pipe.getElement = () => pipe.toSvg({
@@ -196,13 +226,16 @@ secondPipe.update = function (el, timestamp) {
   secondPipe.setAngles(-halfPi + (secondDelta * timestamp.getSeconds()), secondDelta / 2)
   return updatePath.bind(null, el, secondPipe.createPath())
 }
-milliPipe.update = function (el, timestamp) {
-  var t = arguments[2] % 1000
-  if (lastTick <= t) { timeObject = new Date() }
-  lastTick = t
-  milliPipe.setAngles(-halfPi, (milliDelta * (arguments[2] % 1000)))
-  return updatePath.bind(null, el, milliPipe.createPath())
-}
+milliPipe.update = (function () {
+  var t, lastTick
+  return function milliUpdate(el, timestamp) {
+    t = arguments[2] % 100
+    if (lastTick <= t) { timeObject = new Date() }
+    lastTick = t
+    milliPipe.setAngles(-halfPi, (milliDelta * (arguments[2] % 1000)))
+    return updatePath.bind(null, el, milliPipe.createPath())
+  }
+})()
 
 function updatePath (el, path) {
   el.setAttributeNS(null, 'd', path)
@@ -210,7 +243,7 @@ function updatePath (el, path) {
 
 var Clock = new Animation(svg3, clockPipes)
 Clock.enter()
-Clock.paused = false
+Clock.paused = true
 
 function clockTick () {
   Clock.update(timeObject, ...arguments)
@@ -218,3 +251,16 @@ function clockTick () {
   window.requestAnimationFrame(clockTick)
 }
 window.requestAnimationFrame(clockTick)
+
+// UI 
+
+var animations = [spinningCircles, spinningPipes, Clock]
+
+animations.forEach((an) => {
+  an.target.addEventListener('click', (function () {
+    var toggle = new boolToggle()
+    return function () {
+      an.pause(toggle())
+    }
+  })())
+})

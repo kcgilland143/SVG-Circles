@@ -1,3 +1,5 @@
+'use strict'
+
 function Pipe(circle1, circle2, startAngle, endAngle) {
   this.circle1 = circle1
   this.circle2 = circle2
@@ -10,6 +12,10 @@ Pipe.fromAngleLength = function (circle1, circle2, startAngle, angleLength) {
   var delta = angleLength / 2
   //console.log(startAngle, angleLength, delta)
   return new Pipe(circle1, circle2, startAngle - delta, startAngle + delta)
+}
+
+Pipe.prototype.getCenterAngle = function () {
+  return this.startAngle + (this.endAngle - this.startAngle)
 }
 
 Pipe.prototype.setStartAngle = function (angle) {
@@ -59,20 +65,26 @@ Pipe.prototype.toSvg = function (attributes) {
   return c
 }
 
-function createPath(circle1, circle2, startAngle, endAngle, long) {
+var createPath = (function () {
   var op, op2, ip, ip2
   var r1, r2
 
-  r1 = circle1.radius
-  op = circle1.pointOnRadius(startAngle)
-  op2 = circle1.pointOnRadius(endAngle)
+  return function createPath(circle1, circle2, startAngle, endAngle, long) {
 
-  r2 = circle2.radius
-  ip = circle2.pointOnRadius(startAngle)
-  ip2 = circle2.pointOnRadius(endAngle)
+    r1 = circle1.radius
+    op = circle1.pointOnRadius(startAngle)
+    op2 = circle1.pointOnRadius(endAngle)
 
-  var path = `M ${op.x} ${op.y} A ${r1} ${r1} 0 ${long} 1 ${op2.x} ${op2.y}
+    r2 = circle2.radius
+    ip = circle2.pointOnRadius(startAngle)
+    ip2 = circle2.pointOnRadius(endAngle)
+
+    return createPathFromPoints(r1, op, op2, r2, ip, ip2, long)
+  }
+})()
+
+function createPathFromPoints (r1, op, op2, r2, ip, ip2, long) {
+  return `M ${op.x} ${op.y} A ${r1} ${r1} 0 ${long} 1 ${op2.x} ${op2.y}
               L ${ip2.x} ${ip2.y} 
               A ${r2} ${r2} 0 ${long} 0 ${ip.x} ${ip.y} Z`
-  return path
 }

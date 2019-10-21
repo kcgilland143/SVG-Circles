@@ -1,16 +1,22 @@
-Circle = function (cx, cy, radius) {
+'use strict'
+
+function Circle (cx, cy, radius) {
   this.cx = cx
   this.cy = cy
   this.radius = radius
 }
 
-Circle.prototype.pointOnRadius = function (angle, deg=false) {
+Circle.prototype.pointOnRadius = function (angle, deg = false) {
   if (deg) angle = degToRadian(angle)
   return pointOnRadius(this.cx, this.cy, this.radius, angle)
 }
 
 function degToRadian (deg) {
   return deg * Math.PI / 180
+}
+
+function radToDegree (rad) {
+  return rad * (180 / Math.PI)
 }
 
 function pointOnRadius (cx, cy, r, angle) {
@@ -20,6 +26,4 @@ function pointOnRadius (cx, cy, r, angle) {
   }
 }
 
-var circleTest = new Circle(102, 102, 100)
-
-console.log(circleTest.pointOnRadius(90))
+var circleTest = new Circle(104, 104, 100)

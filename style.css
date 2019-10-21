@@ -12,11 +12,23 @@ svg {
 }
 
 svg {
-  margin: 5% 5% 0 5%;
+  margin: 0% 5% 0 5%;
   height: 90%;
   width: 90%;
-  max-height: 100vh
+  max-height: 100vh;
+  animation: transform 2s ease-in-out;
+  transform-origin: center;
 }
+
+svg circle,
+svg path {
+  transform-origin: center;
+}
+
+svg circle:hover,
+svg path:hover {
+  stroke: black;
+} 
 
 @media screen and (min-width: 900px) and (orientation: landscape) {
   svg {
