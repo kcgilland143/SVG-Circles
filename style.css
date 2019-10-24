@@ -25,10 +25,10 @@ svg path {
   transform-origin: center;
 }
 
-svg circle:hover,
+/*svg circle:hover,
 svg path:hover {
   stroke: black;
-} 
+} */
 
 @media screen and (min-width: 900px) and (orientation: landscape) {
   svg {
