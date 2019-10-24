@@ -9,6 +9,16 @@ var twoPi = (2 * Math.PI)
 
 console.log(svg)
 
+var getRotationString = (function getRotationString() {
+	var rStrings = {}
+	var cur;
+	return function rotationString(rotation) {
+		cur = Math.round(radToDegree(rotation) + 'e+2') + 'e-2'
+		if (!rStrings[cur]) rStrings[cur] = `rotate(${cur} 0 0)`
+		return rStrings[cur]
+	}
+})()
+
 var pointOnCircle = circleTest.pointOnRadius(0)
 
 function stepInnerCircles (
@@ -150,6 +160,7 @@ for (var i = 1; i < 10; i++) {
 
 pipes.forEach((pipe, i) => {
   pipe.speed = pipe.speed ? pipe.speed : (Math.random() * 0.01) + 0.005
+  pipe.rotation = 0
   pipe.getElement = function () {
     var el = this.toSvg({'fill-opacity': 0.5})
     el.setAttributeNS(null, 'fill', colors[Math.floor(Math.random() * colors.length)])
@@ -157,14 +168,16 @@ pipes.forEach((pipe, i) => {
   }
   var sA, eA
   pipe.update = function (el, timestamp) {
-    sA = this.startAngle + this.speed
-    eA = this.endAngle + this.speed
-    this.setStartAngle(sA > twoPi ? sA - twoPi : sA)
-    this.setEndAngle(sA > twoPi ? eA - twoPi : eA)
+    sA = this.rotation + this.speed
+    this.rotation = sA >= twoPi ? sA - twoPi : sA
+    // sA = this.startAngle + this.speed
+    // eA = this.endAngle + this.speed
+    // this.setStartAngle(sA > twoPi ? sA - twoPi : sA)
+    // this.setEndAngle(sA > twoPi ? eA - twoPi : eA)
     return this.render.bind(this, el)
   }
   pipe.render = function (el) {
-    el.setAttributeNS(null, 'transform', `rotate(${Math.round(radToDegree(this.getCenterAngle()) + 'e+2') + 'e-2'} 0 0)`)
+    el.setAttributeNS(null, 'transform', getRotationString(this.rotation))
   }
 })
 
